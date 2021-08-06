@@ -2,7 +2,6 @@
 
 namespace SocialiteProviders\Instagram;
 
-use GuzzleHttp\RequestOptions;
 use SocialiteProviders\Manager\OAuth2\AbstractProvider;
 use SocialiteProviders\Manager\OAuth2\User;
 
@@ -50,21 +49,23 @@ class Provider extends AbstractProvider
         $endpoint = '/users/self';
         $query = [
             'access_token' => $token,
+            'fields' => 'id,username',
         ];
         $signature = $this->generateSignature($endpoint, $query);
 
         $query['sig'] = $signature;
         $response = $this->getHttpClient()->get(
-            'https://api.instagram.com/v1/users/self',
+            'https://graph.instagram.com/me',
             [
-                RequestOptions::QUERY   => $query,
-                RequestOptions::HEADERS => [
+                'query'   => $query,
+                'headers' => [
                     'Accept' => 'application/json',
                 ],
             ]
         );
 
-        return json_decode((string) $response->getBody(), true)['data'];
+        return json_decode($response->getBody()->getContents(), true);
+        return json_decode($response->getBody()->getContents(), true)['data'];
     }
 
     /**
@@ -74,18 +75,17 @@ class Provider extends AbstractProvider
     {
         return (new User())->setRaw($user)->map([
             'id'     => $user['id'], 'nickname' => $user['username'],
-            'name'   => $user['full_name'], 'email' => null,
-            'avatar' => $user['profile_picture'],
+            'name'   => $user['username'], 'email' => null,
         ]);
     }
 
     public function getAccessToken($code)
     {
         $response = $this->getHttpClient()->post($this->getTokenUrl(), [
-            RequestOptions::FORM_PARAMS => $this->getTokenFields($code),
+            'form_params' => $this->getTokenFields($code),
         ]);
 
-        $this->credentialsResponseBody = json_decode((string) $response->getBody(), true);
+        $this->credentialsResponseBody = json_decode($response->getBody(), true);
 
         return $this->parseAccessToken($response->getBody());
     }
